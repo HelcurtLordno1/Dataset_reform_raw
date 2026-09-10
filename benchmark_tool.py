@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build, restore, profile, and score the Northwind cleaning benchmarks.
 
-The implementation deliberately uses only Python's standard library.  The three
+The implementation deliberately uses only Python's standard library.  The two
 protected source files are verified before every operation that can create an
 output.  The clean baseline is never opened in write mode.
 """

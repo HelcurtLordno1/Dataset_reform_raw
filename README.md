@@ -19,14 +19,12 @@ Clean trong project này không có nghĩa là xóa mọi `NULL`. Baseline North
 ```text
 .
 ├── README.md
-├── Agent_job.md                  # yêu cầu và quyết định thiết kế ban đầu
 ├── iDecide_Wireframe.html        # tham chiếu UI/behavior của Agent
 ├── northwind.db                  # clean logical baseline, chỉ đọc
 ├── protected_assets.json         # SHA-256 của các nguồn bất biến
 ├── CHECKSUMS.sha256              # checksum của release hiện tại
 ├── benchmark_scenarios.json      # seed và cấu hình tái tạo ba tester
 ├── benchmark_tool.py             # build, profile, validate và chấm điểm
-├── chat_sessions.md              # lịch sử trao đổi thiết kế
 ├── data_raw_tester1/
 ├── data_raw_tester2/
 └── data_raw_tester3/
@@ -148,7 +146,7 @@ Trong **blind evaluation**, không cung cấp Python reference, notebook solutio
 
 ## An toàn và khả năng tái lập
 
-- `northwind.db`, `Agent_job.md` và `iDecide_Wireframe.html` là protected sources, chỉ đọc và được kiểm tra SHA-256.
+- `northwind.db` và `iDecide_Wireframe.html` là protected sources, chỉ đọc và được kiểm tra SHA-256.
 - Mỗi build dùng seed cố định trong `benchmark_scenarios.json`.
 - Raw database không được sửa in-place; output được tạo qua working copy rồi atomic replace.
 - Mỗi pipeline chạy rule theo `execution_order` và chỉ publish output sau khi validation đạt.
