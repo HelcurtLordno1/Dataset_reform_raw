@@ -1,0 +1,936 @@
+{
+  "schema_version": "1.0",
+  "testers": {
+    "1": {
+      "id": "northwind-cleaning-tester1-v1",
+      "name": "Foundational profiling and column cleaning",
+      "difficulty": "foundational",
+      "seed": 101092026,
+      "target_quality_score": 50.0,
+      "description": "Visible, common raw-data defects aligned with iDecide's built-in cleaning actions.",
+      "control_scope": [
+        {
+          "table": "Orders",
+          "columns": [
+            "OrderDate",
+            "Freight",
+            "ShipName",
+            "ShipCity",
+            "ShipPostalCode"
+          ]
+        },
+        {
+          "table": "Order Details",
+          "columns": [
+            "UnitPrice",
+            "Quantity",
+            "Discount"
+          ]
+        },
+        {
+          "table": "Customers",
+          "columns": [
+            "CompanyName",
+            "Country",
+            "Phone",
+            "Fax"
+          ]
+        },
+        {
+          "table": "Products",
+          "columns": [
+            "ProductName",
+            "QuantityPerUnit",
+            "UnitPrice"
+          ]
+        }
+      ],
+      "rules": [
+        {
+          "rule_id": "T1-MISSING-SHIP-POSTAL",
+          "table": "Orders",
+          "columns": [
+            "ShipPostalCode"
+          ],
+          "count": 900,
+          "where": "ShipPostalCode IS NOT NULL",
+          "transform": "null",
+          "error_type": "missing_value",
+          "severity": "medium",
+          "expected_action": "fill_or_reference_missing",
+          "recoverability": "oracle_required",
+          "description": "Inject missing shipping postal codes into otherwise complete orders."
+        },
+        {
+          "rule_id": "T1-CASE-SHIP-CITY",
+          "table": "Orders",
+          "columns": [
+            "ShipCity"
+          ],
+          "count": 700,
+          "where": "ShipCity IS NOT NULL",
+          "transform": "case_noise",
+          "error_type": "categorical_inconsistency",
+          "severity": "low",
+          "expected_action": "normalize_case",
+          "recoverability": "rule_repairable",
+          "description": "Mix upper- and lower-case spellings of shipping cities."
+        },
+        {
+          "rule_id": "T1-WHITESPACE-SHIP-NAME",
+          "table": "Orders",
+          "columns": [
+            "ShipName"
+          ],
+          "count": 700,
+          "where": "ShipName IS NOT NULL",
+          "transform": "pad_whitespace",
+          "error_type": "whitespace_noise",
+          "severity": "low",
+          "expected_action": "trim_and_collapse_whitespace",
+          "recoverability": "rule_repairable",
+          "description": "Add leading, trailing, and repeated internal whitespace."
+        },
+        {
+          "rule_id": "T1-MIXED-ORDER-DATE",
+          "table": "Orders",
+          "columns": [
+            "OrderDate"
+          ],
+          "count": 700,
+          "where": "OrderDate IS NOT NULL",
+          "transform": "date_format",
+          "error_type": "mixed_date_format",
+          "severity": "medium",
+          "expected_action": "normalize_date_iso8601",
+          "recoverability": "rule_repairable",
+          "description": "Represent timestamps in three non-ISO formats."
+        },
+        {
+          "rule_id": "T1-TEXT-FREIGHT",
+          "table": "Orders",
+          "columns": [
+            "Freight"
+          ],
+          "count": 700,
+          "where": "Freight IS NOT NULL",
+          "transform": "prefixed_numeric",
+          "params": {
+            "prefix": "USD "
+          },
+          "error_type": "wrong_storage_type",
+          "severity": "medium",
+          "expected_action": "parse_numeric_and_cast",
+          "recoverability": "rule_repairable",
+          "description": "Store numeric freight values as currency-prefixed text."
+        },
+        {
+          "rule_id": "T1-PERCENT-DISCOUNT",
+          "table": "Order Details",
+          "columns": [
+            "Discount"
+          ],
+          "count": 500,
+          "where": "Discount > 0",
+          "transform": "percent_string",
+          "error_type": "mixed_numeric_format",
+          "severity": "medium",
+          "expected_action": "parse_percentage_to_fraction",
+          "recoverability": "rule_repairable",
+          "description": "Mix percentage strings with fractional discount values."
+        },
+        {
+          "rule_id": "T1-QUANTITY-OUTLIER",
+          "table": "Order Details",
+          "columns": [
+            "Quantity"
+          ],
+          "count": 800,
+          "where": "Quantity > 0",
+          "transform": "multiply",
+          "params": {
+            "factor": 100
+          },
+          "error_type": "extreme_outlier",
+          "severity": "high",
+          "expected_action": "flag_and_repair_outlier",
+          "recoverability": "rule_repairable",
+          "description": "Create obvious order-quantity outliers."
+        },
+        {
+          "rule_id": "T1-COUNTRY-ALIASES",
+          "table": "Customers",
+          "columns": [
+            "Country"
+          ],
+          "count": 50,
+          "where": "Country IS NOT NULL",
+          "transform": "country_alias",
+          "error_type": "categorical_alias",
+          "severity": "low",
+          "expected_action": "canonicalize_category",
+          "recoverability": "mapping_repairable",
+          "description": "Use alternative country labels and spellings."
+        },
+        {
+          "rule_id": "T1-PHONE-PLACEHOLDERS",
+          "table": "Customers",
+          "columns": [
+            "Phone"
+          ],
+          "count": 40,
+          "where": "Phone IS NOT NULL",
+          "transform": "placeholder",
+          "params": {
+            "values": [
+              "N/A",
+              "unknown",
+              "-"
+            ]
+          },
+          "error_type": "placeholder_missing",
+          "severity": "medium",
+          "expected_action": "standardize_placeholder_to_null",
+          "recoverability": "oracle_required",
+          "description": "Replace real phone values with raw missing-value placeholders."
+        },
+        {
+          "rule_id": "T1-WHITESPACE-PRODUCT",
+          "table": "Products",
+          "columns": [
+            "ProductName"
+          ],
+          "count": 30,
+          "where": "ProductName IS NOT NULL",
+          "transform": "pad_whitespace",
+          "error_type": "whitespace_noise",
+          "severity": "low",
+          "expected_action": "trim_and_collapse_whitespace",
+          "recoverability": "rule_repairable",
+          "description": "Add whitespace noise to product names."
+        },
+        {
+          "rule_id": "T1-TEXT-PRODUCT-PRICE",
+          "table": "Products",
+          "columns": [
+            "UnitPrice"
+          ],
+          "count": 30,
+          "where": "UnitPrice IS NOT NULL",
+          "transform": "prefixed_numeric",
+          "params": {
+            "prefix": "$"
+          },
+          "error_type": "wrong_storage_type",
+          "severity": "medium",
+          "expected_action": "parse_numeric_and_cast",
+          "recoverability": "rule_repairable",
+          "description": "Store product prices as currency-prefixed text."
+        },
+        {
+          "rule_id": "T1-DUPLICATE-CUSTOMER",
+          "table": "Customers",
+          "columns": [
+            "CustomerID"
+          ],
+          "count": 20,
+          "where": "1=1",
+          "transform": "duplicate_rows",
+          "params": {
+            "new_pk_prefix": "D"
+          },
+          "error_type": "semantic_duplicate",
+          "severity": "medium",
+          "expected_action": "deduplicate_by_business_fields",
+          "recoverability": "rule_repairable",
+          "description": "Clone customers under new unique identifiers to bypass the primary-key constraint."
+        }
+      ]
+    },
+    "2": {
+      "id": "northwind-cleaning-tester2-v1",
+      "name": "Advanced relational and business-rule cleaning",
+      "difficulty": "advanced",
+      "seed": 202092026,
+      "target_quality_score": 45.0,
+      "description": "Cross-column, referential, and business-rule defects requiring more than basic profiling.",
+      "control_scope": [
+        {
+          "table": "Orders",
+          "columns": [
+            "CustomerID",
+            "EmployeeID",
+            "OrderDate",
+            "RequiredDate",
+            "ShippedDate",
+            "ShipVia",
+            "Freight",
+            "ShipCity",
+            "ShipCountry"
+          ]
+        },
+        {
+          "table": "Order Details",
+          "columns": [
+            "ProductID",
+            "Quantity",
+            "Discount"
+          ]
+        },
+        {
+          "table": "Products",
+          "columns": [
+            "SupplierID",
+            "CategoryID",
+            "UnitsInStock"
+          ]
+        },
+        {
+          "table": "Customers",
+          "columns": [
+            "City",
+            "Country"
+          ]
+        }
+      ],
+      "rules": [
+        {
+          "rule_id": "T2-ORPHAN-CUSTOMER",
+          "table": "Orders",
+          "columns": [
+            "CustomerID"
+          ],
+          "count": 1000,
+          "where": "CustomerID IS NOT NULL",
+          "transform": "invalid_fk",
+          "params": {
+            "value": "XXXXX"
+          },
+          "error_type": "foreign_key_violation",
+          "severity": "high",
+          "expected_action": "repair_from_customer_reference",
+          "recoverability": "reference_repairable",
+          "description": "Break Orders-to-Customers references."
+        },
+        {
+          "rule_id": "T2-ORPHAN-EMPLOYEE",
+          "table": "Orders",
+          "columns": [
+            "EmployeeID"
+          ],
+          "count": 600,
+          "where": "EmployeeID IS NOT NULL",
+          "transform": "invalid_fk",
+          "params": {
+            "value": 9999
+          },
+          "error_type": "foreign_key_violation",
+          "severity": "high",
+          "expected_action": "repair_from_employee_reference",
+          "recoverability": "reference_repairable",
+          "description": "Break Orders-to-Employees references."
+        },
+        {
+          "rule_id": "T2-ORPHAN-SHIPPER",
+          "table": "Orders",
+          "columns": [
+            "ShipVia"
+          ],
+          "count": 600,
+          "where": "ShipVia IS NOT NULL",
+          "transform": "invalid_fk",
+          "params": {
+            "value": 9999
+          },
+          "error_type": "foreign_key_violation",
+          "severity": "high",
+          "expected_action": "repair_from_shipper_reference",
+          "recoverability": "reference_repairable",
+          "description": "Break Orders-to-Shippers references."
+        },
+        {
+          "rule_id": "T2-REQUIRED-BEFORE-ORDER",
+          "table": "Orders",
+          "columns": [
+            "RequiredDate"
+          ],
+          "extra_columns": [
+            "OrderDate"
+          ],
+          "count": 900,
+          "where": "OrderDate IS NOT NULL AND RequiredDate IS NOT NULL",
+          "transform": "date_before",
+          "params": {
+            "source_column": "OrderDate",
+            "days": 30
+          },
+          "error_type": "date_business_rule",
+          "severity": "high",
+          "expected_action": "repair_date_sequence",
+          "recoverability": "oracle_required",
+          "description": "Set required dates before their order dates."
+        },
+        {
+          "rule_id": "T2-SHIPPED-BEFORE-ORDER",
+          "table": "Orders",
+          "columns": [
+            "ShippedDate"
+          ],
+          "extra_columns": [
+            "OrderDate"
+          ],
+          "count": 900,
+          "where": "OrderDate IS NOT NULL AND ShippedDate IS NOT NULL",
+          "transform": "date_before",
+          "params": {
+            "source_column": "OrderDate",
+            "days": 10
+          },
+          "error_type": "date_business_rule",
+          "severity": "high",
+          "expected_action": "repair_date_sequence",
+          "recoverability": "oracle_required",
+          "description": "Set shipped dates before their order dates."
+        },
+        {
+          "rule_id": "T2-NEGATIVE-FREIGHT",
+          "table": "Orders",
+          "columns": [
+            "Freight"
+          ],
+          "count": 800,
+          "where": "Freight >= 0",
+          "transform": "negative",
+          "error_type": "invalid_numeric_domain",
+          "severity": "high",
+          "expected_action": "flag_and_repair_negative_value",
+          "recoverability": "rule_repairable",
+          "description": "Create negative freight charges."
+        },
+        {
+          "rule_id": "T2-SWAPPED-SHIP-LOCATION",
+          "table": "Orders",
+          "columns": [
+            "ShipCity",
+            "ShipCountry"
+          ],
+          "count": 700,
+          "where": "ShipCity IS NOT NULL AND ShipCountry IS NOT NULL AND ShipCity <> ShipCountry",
+          "transform": "swap_columns",
+          "error_type": "column_misalignment",
+          "severity": "high",
+          "expected_action": "detect_and_reverse_column_swap",
+          "recoverability": "rule_repairable",
+          "description": "Swap city and country values within selected orders."
+        },
+        {
+          "rule_id": "T2-ORPHAN-DETAIL-PRODUCT",
+          "table": "Order Details",
+          "columns": [
+            "ProductID"
+          ],
+          "count": 800,
+          "where": "ProductID IS NOT NULL",
+          "transform": "add",
+          "params": {
+            "increment": 100000
+          },
+          "error_type": "foreign_key_violation",
+          "severity": "high",
+          "expected_action": "repair_from_product_reference",
+          "recoverability": "reference_repairable",
+          "description": "Replace valid product keys with unique nonexistent keys."
+        },
+        {
+          "rule_id": "T2-NEGATIVE-QUANTITY",
+          "table": "Order Details",
+          "columns": [
+            "Quantity"
+          ],
+          "count": 800,
+          "where": "Quantity > 0 AND ProductID < 100000",
+          "transform": "negative",
+          "error_type": "invalid_numeric_domain",
+          "severity": "high",
+          "expected_action": "flag_and_repair_negative_value",
+          "recoverability": "rule_repairable",
+          "description": "Create impossible negative order quantities."
+        },
+        {
+          "rule_id": "T2-DISCOUNT-OUTSIDE-RANGE",
+          "table": "Order Details",
+          "columns": [
+            "Discount"
+          ],
+          "count": 600,
+          "where": "Discount >= 0.05 AND ProductID < 100000",
+          "transform": "multiply",
+          "params": {
+            "factor": 100
+          },
+          "error_type": "invalid_numeric_domain",
+          "severity": "high",
+          "expected_action": "normalize_discount_fraction",
+          "recoverability": "rule_repairable",
+          "description": "Convert fractional discounts into invalid whole percentages."
+        },
+        {
+          "rule_id": "T2-ORPHAN-PRODUCT-SUPPLIER",
+          "table": "Products",
+          "columns": [
+            "SupplierID"
+          ],
+          "count": 25,
+          "where": "SupplierID IS NOT NULL",
+          "transform": "invalid_fk",
+          "params": {
+            "value": 9999
+          },
+          "error_type": "foreign_key_violation",
+          "severity": "high",
+          "expected_action": "repair_from_supplier_reference",
+          "recoverability": "reference_repairable",
+          "description": "Break Product-to-Supplier references."
+        },
+        {
+          "rule_id": "T2-ORPHAN-PRODUCT-CATEGORY",
+          "table": "Products",
+          "columns": [
+            "CategoryID"
+          ],
+          "count": 25,
+          "where": "CategoryID IS NOT NULL",
+          "transform": "invalid_fk",
+          "params": {
+            "value": 9999
+          },
+          "error_type": "foreign_key_violation",
+          "severity": "high",
+          "expected_action": "repair_from_category_reference",
+          "recoverability": "reference_repairable",
+          "description": "Break Product-to-Category references."
+        },
+        {
+          "rule_id": "T2-NEGATIVE-STOCK",
+          "table": "Products",
+          "columns": [
+            "UnitsInStock"
+          ],
+          "count": 30,
+          "where": "UnitsInStock >= 0",
+          "transform": "negative",
+          "error_type": "invalid_numeric_domain",
+          "severity": "high",
+          "expected_action": "flag_and_repair_negative_value",
+          "recoverability": "rule_repairable",
+          "description": "Create negative inventory levels."
+        },
+        {
+          "rule_id": "T2-SWAPPED-CUSTOMER-LOCATION",
+          "table": "Customers",
+          "columns": [
+            "City",
+            "Country"
+          ],
+          "count": 40,
+          "where": "City IS NOT NULL AND Country IS NOT NULL AND City <> Country",
+          "transform": "swap_columns",
+          "error_type": "column_misalignment",
+          "severity": "high",
+          "expected_action": "detect_and_reverse_column_swap",
+          "recoverability": "rule_repairable",
+          "description": "Swap customer city and country fields."
+        },
+        {
+          "rule_id": "T2-DUPLICATE-ORDER",
+          "table": "Orders",
+          "columns": [
+            "OrderID"
+          ],
+          "count": 20,
+          "where": "1=1",
+          "transform": "duplicate_rows",
+          "params": {
+            "new_pk_base": 800000
+          },
+          "error_type": "semantic_duplicate",
+          "severity": "high",
+          "expected_action": "deduplicate_and_check_child_records",
+          "recoverability": "rule_repairable",
+          "description": "Clone orders under new keys without matching details."
+        }
+      ]
+    },
+    "3": {
+      "id": "northwind-cleaning-tester3-v1",
+      "name": "Expert contextual anomaly and entity consistency cleaning",
+      "difficulty": "expert",
+      "seed": 303092026,
+      "target_quality_score": 40.0,
+      "description": "Plausible values with broken context, hidden Unicode, entity drift, and multi-table inconsistencies.",
+      "control_scope": [
+        {
+          "table": "Orders",
+          "columns": [
+            "CustomerID",
+            "EmployeeID",
+            "OrderDate",
+            "ShipVia",
+            "Freight",
+            "ShipName",
+            "ShipAddress",
+            "ShipCity",
+            "ShipPostalCode",
+            "ShipCountry"
+          ]
+        },
+        {
+          "table": "Order Details",
+          "columns": [
+            "UnitPrice",
+            "Quantity",
+            "Discount"
+          ]
+        },
+        {
+          "table": "Customers",
+          "columns": [
+            "ContactName",
+            "ContactTitle",
+            "CompanyName"
+          ]
+        },
+        {
+          "table": "Products",
+          "columns": [
+            "SupplierID",
+            "CategoryID",
+            "QuantityPerUnit",
+            "UnitPrice"
+          ]
+        }
+      ],
+      "rules": [
+        {
+          "rule_id": "T3-CONTEXTUAL-DETAIL-PRICE",
+          "table": "Order Details",
+          "columns": [
+            "UnitPrice"
+          ],
+          "count": 1800,
+          "where": "UnitPrice > 0",
+          "transform": "rotate_values",
+          "params": {
+            "shift": 37
+          },
+          "error_type": "contextual_value_mismatch",
+          "severity": "high",
+          "expected_action": "cross_check_price_against_product_and_time",
+          "recoverability": "reference_or_oracle",
+          "description": "Rotate plausible prices among unrelated order lines, preserving type and global range."
+        },
+        {
+          "rule_id": "T3-CONTEXTUAL-DETAIL-QUANTITY",
+          "table": "Order Details",
+          "columns": [
+            "Quantity"
+          ],
+          "count": 1500,
+          "where": "Quantity > 0",
+          "transform": "rotate_values",
+          "params": {
+            "shift": 53
+          },
+          "error_type": "contextual_value_mismatch",
+          "severity": "high",
+          "expected_action": "detect_contextual_quantity_anomaly",
+          "recoverability": "oracle_required",
+          "description": "Permute valid quantities across unrelated order lines."
+        },
+        {
+          "rule_id": "T3-DISCOUNT-LABEL-DRIFT",
+          "table": "Order Details",
+          "columns": [
+            "Discount"
+          ],
+          "count": 700,
+          "where": "Discount > 0",
+          "transform": "rotate_values",
+          "params": {
+            "shift": 29
+          },
+          "error_type": "contextual_value_mismatch",
+          "severity": "medium",
+          "expected_action": "validate_discount_against_order_context",
+          "recoverability": "oracle_required",
+          "description": "Reassign valid discount levels so univariate profiling remains plausible."
+        },
+        {
+          "rule_id": "T3-PLAUSIBLE-CUSTOMER-REASSIGNMENT",
+          "table": "Orders",
+          "columns": [
+            "CustomerID"
+          ],
+          "count": 1200,
+          "where": "CustomerID IS NOT NULL",
+          "transform": "rotate_values",
+          "params": {
+            "shift": 41
+          },
+          "error_type": "entity_relationship_mismatch",
+          "severity": "high",
+          "expected_action": "cross_check_customer_shipping_identity",
+          "recoverability": "reference_or_oracle",
+          "description": "Reassign orders to other valid customers while retaining original shipping identities."
+        },
+        {
+          "rule_id": "T3-PLAUSIBLE-EMPLOYEE-REASSIGNMENT",
+          "table": "Orders",
+          "columns": [
+            "EmployeeID"
+          ],
+          "count": 1000,
+          "where": "EmployeeID IS NOT NULL",
+          "transform": "rotate_values",
+          "params": {
+            "shift": 17
+          },
+          "error_type": "entity_relationship_mismatch",
+          "severity": "medium",
+          "expected_action": "detect_employee_assignment_drift",
+          "recoverability": "oracle_required",
+          "description": "Rotate valid employee identifiers among orders."
+        },
+        {
+          "rule_id": "T3-PLAUSIBLE-SHIPPER-REASSIGNMENT",
+          "table": "Orders",
+          "columns": [
+            "ShipVia"
+          ],
+          "count": 800,
+          "where": "ShipVia IS NOT NULL",
+          "transform": "rotate_values",
+          "params": {
+            "shift": 11
+          },
+          "error_type": "entity_relationship_mismatch",
+          "severity": "medium",
+          "expected_action": "detect_shipper_pattern_drift",
+          "recoverability": "oracle_required",
+          "description": "Rotate valid shipper IDs without creating a foreign-key violation."
+        },
+        {
+          "rule_id": "T3-ONE-YEAR-DATE-SHIFT",
+          "table": "Orders",
+          "columns": [
+            "OrderDate"
+          ],
+          "count": 1000,
+          "where": "OrderDate IS NOT NULL",
+          "transform": "date_shift",
+          "params": {
+            "days": 365
+          },
+          "error_type": "temporal_context_anomaly",
+          "severity": "high",
+          "expected_action": "validate_date_against_related_timestamps_and_range",
+          "recoverability": "rule_or_oracle",
+          "description": "Shift valid ISO order timestamps one year while leaving related dates unchanged."
+        },
+        {
+          "rule_id": "T3-FREIGHT-SCALE-DRIFT",
+          "table": "Orders",
+          "columns": [
+            "Freight"
+          ],
+          "count": 800,
+          "where": "Freight > 0",
+          "transform": "scale",
+          "params": {
+            "factor": 0.01
+          },
+          "error_type": "unit_scale_mismatch",
+          "severity": "high",
+          "expected_action": "detect_and_restore_unit_scale",
+          "recoverability": "rule_repairable",
+          "description": "Apply a silent 100x unit-scale error to freight."
+        },
+        {
+          "rule_id": "T3-HIDDEN-UNICODE-CITY",
+          "table": "Orders",
+          "columns": [
+            "ShipCity"
+          ],
+          "count": 700,
+          "where": "ShipCity IS NOT NULL",
+          "transform": "zero_width",
+          "error_type": "hidden_unicode",
+          "severity": "medium",
+          "expected_action": "unicode_normalize_and_remove_invisible_characters",
+          "recoverability": "rule_repairable",
+          "description": "Insert zero-width Unicode characters into city names."
+        },
+        {
+          "rule_id": "T3-CUSTOMER-CONTACT-MISALIGNMENT",
+          "table": "Customers",
+          "columns": [
+            "ContactName",
+            "ContactTitle"
+          ],
+          "count": 60,
+          "where": "ContactName IS NOT NULL AND ContactTitle IS NOT NULL",
+          "transform": "rotate_values",
+          "params": {
+            "shift": 13
+          },
+          "error_type": "multi_column_entity_mismatch",
+          "severity": "high",
+          "expected_action": "entity_level_consistency_check",
+          "recoverability": "oracle_required",
+          "description": "Move plausible contact identities and roles between customer entities."
+        },
+        {
+          "rule_id": "T3-VALID-WRONG-SUPPLIER",
+          "table": "Products",
+          "columns": [
+            "SupplierID"
+          ],
+          "count": 60,
+          "where": "SupplierID IS NOT NULL",
+          "transform": "rotate_values",
+          "params": {
+            "shift": 7
+          },
+          "error_type": "valid_but_wrong_foreign_key",
+          "severity": "high",
+          "expected_action": "validate_product_supplier_semantics",
+          "recoverability": "reference_or_oracle",
+          "description": "Assign products to different existing suppliers."
+        },
+        {
+          "rule_id": "T3-VALID-WRONG-CATEGORY",
+          "table": "Products",
+          "columns": [
+            "CategoryID"
+          ],
+          "count": 60,
+          "where": "CategoryID IS NOT NULL",
+          "transform": "rotate_values",
+          "params": {
+            "shift": 9
+          },
+          "error_type": "valid_but_wrong_foreign_key",
+          "severity": "high",
+          "expected_action": "validate_product_category_semantics",
+          "recoverability": "reference_or_oracle",
+          "description": "Assign products to different existing categories."
+        },
+        {
+          "rule_id": "T3-PLAUSIBLE-PRODUCT-PRICE",
+          "table": "Products",
+          "columns": [
+            "UnitPrice"
+          ],
+          "count": 60,
+          "where": "UnitPrice > 0",
+          "transform": "rotate_values",
+          "params": {
+            "shift": 19
+          },
+          "error_type": "contextual_value_mismatch",
+          "severity": "high",
+          "expected_action": "validate_price_against_product_identity",
+          "recoverability": "oracle_required",
+          "description": "Rotate valid product prices while preserving the aggregate distribution."
+        },
+        {
+          "rule_id": "T3-TYPO-SHIP-NAME",
+          "table": "Orders",
+          "columns": [
+            "ShipName"
+          ],
+          "count": 700,
+          "where": "ShipName IS NOT NULL",
+          "transform": "typo",
+          "error_type": "entity_name_typo",
+          "severity": "medium",
+          "expected_action": "fuzzy_match_and_canonicalize_entity",
+          "recoverability": "reference_repairable",
+          "description": "Create subtle adjacent-character typos in shipping entity names."
+        },
+        {
+          "rule_id": "T3-HIDDEN-UNICODE-UNIT",
+          "table": "Products",
+          "columns": [
+            "QuantityPerUnit"
+          ],
+          "count": 50,
+          "where": "QuantityPerUnit IS NOT NULL",
+          "transform": "zero_width",
+          "error_type": "hidden_unicode",
+          "severity": "medium",
+          "expected_action": "unicode_normalize_and_remove_invisible_characters",
+          "recoverability": "rule_repairable",
+          "description": "Insert invisible characters into quantity/unit descriptions."
+        },
+        {
+          "rule_id": "T3-DUPLICATE-CUSTOMER",
+          "table": "Customers",
+          "columns": [
+            "CustomerID"
+          ],
+          "count": 20,
+          "where": "1=1",
+          "transform": "duplicate_rows",
+          "params": {
+            "new_pk_prefix": "X"
+          },
+          "error_type": "semantic_duplicate",
+          "severity": "high",
+          "expected_action": "entity_resolution_and_deduplication",
+          "recoverability": "rule_repairable",
+          "description": "Clone customers under different IDs so key-based deduplication is insufficient."
+        },
+        {
+          "rule_id": "T3-MIXED-ORPHAN-CUSTOMER",
+          "table": "Orders",
+          "columns": [
+            "CustomerID"
+          ],
+          "count": 500,
+          "where": "CustomerID IS NOT NULL",
+          "transform": "invalid_fk",
+          "params": {
+            "value": "GHOST"
+          },
+          "error_type": "foreign_key_violation",
+          "severity": "high",
+          "expected_action": "repair_or_quarantine_orphan_relation",
+          "recoverability": "reference_repairable",
+          "description": "Mix explicit orphan entities into a dataset dominated by subtler errors."
+        },
+        {
+          "rule_id": "T3-COHERENT-WRONG-SHIPPING-BLOCK",
+          "table": "Orders",
+          "columns": [
+            "ShipAddress",
+            "ShipCity",
+            "ShipPostalCode",
+            "ShipCountry"
+          ],
+          "count": 800,
+          "where": "ShipAddress IS NOT NULL AND ShipCity IS NOT NULL AND ShipPostalCode IS NOT NULL AND ShipCountry IS NOT NULL",
+          "transform": "rotate_values",
+          "params": {
+            "shift": 31
+          },
+          "error_type": "cross_entity_block_mismatch",
+          "severity": "high",
+          "expected_action": "cross_check_shipping_block_with_customer_and_ship_name",
+          "recoverability": "oracle_required",
+          "description": "Move internally coherent address blocks to the wrong order entities."
+        }
+      ]
+    }
+  }
+}

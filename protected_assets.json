@@ -1,0 +1,20 @@
+{
+  "policy": "These files are immutable benchmark sources and must never be opened in write mode.",
+  "assets": [
+    {
+      "path": "northwind.db",
+      "role": "clean logical baseline",
+      "sha256": "c221a5da029925932a0d62530811f8787cd2a7b85d69ed84aaff4b1fb2b471df"
+    },
+    {
+      "path": "Agent_job.md",
+      "role": "approved project requirements",
+      "sha256": "572941a2aa620a75df8cf81abcc86dbe7ff1b0a0d05b5113e60c95312d1825b9"
+    },
+    {
+      "path": "iDecide_Wireframe.html",
+      "role": "read-only UI and behavior reference",
+      "sha256": "c596bf9cc3299eda15c9daf5d38fbe5b7d2f462c7c6f9a28f31148a3590a4397"
+    }
+  ]
+}
